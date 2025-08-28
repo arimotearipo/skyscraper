@@ -177,7 +177,6 @@ function isValidPlacement(povs, board, rowPos, colPos) {
 }
 
 function backtrack(board, povs, position) {
-    console.log("POSITION", position)
     if (position === SKYSCRAPER_NUM) {
         solutions.push(board.map((b) => [...b]))
         return
@@ -220,14 +219,23 @@ function validateArgs(argv) {
     return ""
 }
 
-function parseBoard(board) {
+function parseBoard(board, povs) {
     let boardString = ""
 
-    for (const row of board) {
+    boardString += `\t${povs[0].join(" ")}\t\n`
+    boardString += `  ┌─────────┐\n`
+    
+    for (const [index, row] of board.entries()) {
         const rowString = row.join(" ")
-
-        boardString += `| ${rowString} |\n`
+        
+        const leftPov = povs[3][index]
+        const rightPov = povs[1][index]
+        
+        boardString += `${leftPov} │ ${rowString} │ ${rightPov}\n`
     }
+
+    boardString += `  └─────────┘\n`
+    boardString += `\t${povs[2].join(" ")}\t\n`
 
     return boardString
 }
@@ -261,7 +269,7 @@ async function eraseFileContent() {
     await Bun.write(SOLUTIONS_FILE_PATH, "")
 }
 
-function writeToFile() {
+function writeToFile(povs) {
     const file = Bun.file(SOLUTIONS_FILE_PATH)
 
     const writer = file.writer()
@@ -269,7 +277,7 @@ function writeToFile() {
     writer.write(`${solutions.length} solution(s) found\n\n`)
     solutions.forEach((solution, index) => {
         writer.write(`Solution ${index + 1}:\n`)
-        writer.write(parseBoard(solution))
+        writer.write(parseBoard(solution, povs))
         writer.write("\n")
     })
 
@@ -286,7 +294,7 @@ if (!isArgsInvalid) {
     backtrack(board, povs, startPosition)
 
     eraseFileContent()
-    writeToFile()
+    writeToFile(povs)
 } else {
     console.log(isArgsInvalid)
 }
