@@ -1,8 +1,10 @@
 const solutions = []
 
-const SKYSCRAPER_HEIGHTS = [1, 2, 3, 4]
-const SKYSCRAPER_NUM = 16
 const SOLUTIONS_FILE_PATH = "./solutions.txt"
+const UP_POV_INDEX = 0
+const RIGHT_POV_INDEX = 1
+const DOWN_POV_INDEX = 2
+const LEFT_POV_INDEX = 3
 
 function countSeenSkyscraper(skyscrapers) {
     if (skyscrapers.length === 0) {
@@ -51,20 +53,16 @@ function isColUnique(board, rowPos, colPos) {
 
     const valueCount = col.filter((v) => v === value).length
 
-    if (valueCount > 1) {
-        return false
-    }
-
     return valueCount <= 1
 }
 
-function initBoard() {
-    // 2D 4x4 array
+function initBoard(rowNum, colNum) {
+    // 2D rowNum x colNum array
     const board = []
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < rowNum; i++) {
         const row = []
-        for (let j = 0; j < 4; j++) {
+        for (let j = 0; j < colNum; j++) {
             row.push(0)
         }
 
@@ -77,7 +75,7 @@ function initBoard() {
 function isUpPovValid(povs, board, colPos) {
     const skyscrapers = board.map((row) => row[colPos])
 
-    const pov = povs[0][colPos]
+    const pov = povs[UP_POV_INDEX][colPos]
 
     const skyscraperViewed = countSeenSkyscraper(skyscrapers)
 
@@ -91,7 +89,7 @@ function isUpPovValid(povs, board, colPos) {
 function isDownPovValid(povs, board, colPos) {
     const skyscrapers = board.map((row) => row[colPos]).toReversed()
 
-    const pov = povs[2][colPos]
+    const pov = povs[DOWN_POV_INDEX][colPos]
 
     const skyscraperViewed = countSeenSkyscraper(skyscrapers)
 
@@ -105,7 +103,7 @@ function isDownPovValid(povs, board, colPos) {
 function isLeftPovValid(povs, board, rowPos) {
     const skyscrapers = board[rowPos]
 
-    const pov = povs[3][rowPos]
+    const pov = povs[LEFT_POV_INDEX][rowPos]
 
     const skyscraperViewed = countSeenSkyscraper(skyscrapers)
 
@@ -119,7 +117,7 @@ function isLeftPovValid(povs, board, rowPos) {
 function isRightPovValid(povs, board, rowPos) {
     const skyscrapers = board[rowPos].toReversed()
 
-    const pov = povs[1][rowPos]
+    const pov = povs[RIGHT_POV_INDEX][rowPos]
 
     const skyscraperViewed = countSeenSkyscraper(skyscrapers)
 
@@ -160,7 +158,9 @@ function isValidPlacement(povs, board, rowPos, colPos) {
     const rowIsComplete = isRowComplete(board, rowPos)
 
     if (rowIsComplete) {
-        if (!isLeftPovValid(povs, board, rowPos) || !isRightPovValid(povs, board, rowPos)) {
+        const leftPovIsValid = isLeftPovValid(povs, board, rowPos)
+        const rightPovIsValid = isRightPovValid(povs, board, rowPos)
+        if (!leftPovIsValid || !rightPovIsValid) {
             return false
         }
     }
@@ -168,7 +168,9 @@ function isValidPlacement(povs, board, rowPos, colPos) {
     const colIsComplete = isColComplete(board, colPos)
 
     if (colIsComplete) {
-        if (!isUpPovValid(povs, board, colPos) || !isDownPovValid(povs, board, colPos)) {
+        const upPovIsValid = isUpPovValid(povs, board, colPos)
+        const downPovIsValid = isDownPovValid(povs, board, colPos)
+        if (!upPovIsValid || !downPovIsValid) {
             return false
         }
     }
@@ -176,22 +178,21 @@ function isValidPlacement(povs, board, rowPos, colPos) {
     return true
 }
 
-function backtrack(board, povs, position) {
-    if (position === SKYSCRAPER_NUM) {
+function backtrack(board, povs, position, colNum, skyscraperHeights, skyscraperNum) {
+    if (position === skyscraperNum) {
         solutions.push(board.map((b) => [...b]))
         return
     }
 
-    const row = Math.floor(position / 4)
-    const col = position % 4
+    const row = Math.floor(position / colNum)
+    const col = position % colNum
 
-    for (const height of SKYSCRAPER_HEIGHTS) {
+    for (const height of skyscraperHeights) {
         board[row][col] = height
 
         const placementIsValid = isValidPlacement(povs, board, row, col)
-        // console.log("placementIsValid", placementIsValid)
         if (placementIsValid) {
-            backtrack(board, povs, position + 1)
+            backtrack(board, povs, position + 1, colNum, skyscraperHeights, skyscraperNum)
         }
 
         board[row][col] = 0
@@ -199,15 +200,19 @@ function backtrack(board, povs, position) {
 }
 
 
+// should be 6 argv
 function validateArgs(argv) {
-    if (argv.length !== 3) {
-        return `Please execute \`bun run index.js "col1up col2up col3up col4up col1down col2down col3down col4down row1left row2left row3left row4left row1right row2right row3right row4right"\'`
+    const instruction = `Please execute \`bun run index.js "[col1up col2up col3up col4up...]" "[row1right row2right row3right row4right...]" "[col1down col2down col3down col4down...]" "[row1left row2left row3left row4left...]"\'\n`
+    const example = `Example: \`bun run index.js "4 3 2 1" "1 2 2 2" "4 3 2 1" "1 2 2 2"\'\n`
+
+    if (argv.length !== 6) {
+        return instruction + example
     }
 
     const povs = argv.at(-1).split(" ")
 
-    if (povs.length !== 16) {
-        return `Please execute \`bun run index.js "col1up col2up col3up col4up col1down col2down col3down col4down row1left row2left row3left row4left row1right row2right row3right row4right"\\'nThere needs to be 16 point of views.`
+    if (povs.length % 2 !== 0) {
+        return instruction + example
     }
 
     for (const pov of povs) {
@@ -219,57 +224,51 @@ function validateArgs(argv) {
     return ""
 }
 
-function parseBoard(board, povs) {
+function parseBoard(board, povs, colNum) {
+    const horizontalLine = "─".repeat(colNum * 2 + 1)
+    const topBorder = "  ┌" + horizontalLine + "┐\n"
+    const bottomBorder = "  └" + horizontalLine + "┘\n"
+    const topPov = `\t\t${povs[0].join(" ")}\n`
+    const bottomPov = `\t\t${povs[2].join(" ")}\n`
+
     let boardString = ""
 
-    boardString += `\t${povs[0].join(" ")}\t\n`
-    boardString += `  ┌─────────┐\n`
+    boardString += topPov
+    boardString += topBorder
     
     for (const [index, row] of board.entries()) {
         const rowString = row.join(" ")
         
-        const leftPov = povs[3][index]
-        const rightPov = povs[1][index]
+        const leftPov = povs[LEFT_POV_INDEX][index]
+        const rightPov = povs[RIGHT_POV_INDEX][index]
         
         boardString += `${leftPov} │ ${rowString} │ ${rightPov}\n`
     }
 
-    boardString += `  └─────────┘\n`
-    boardString += `\t${povs[2].join(" ")}\t\n`
+    boardString += bottomBorder
+    boardString += bottomPov
 
     return boardString
 }
 
 function parseArgs(argv) {
-    const povs = argv.at(-1).split(" ")
+    const povs = argv.slice(-4)
 
-    // 2D array
-    const povsArr = []
+    const povsArray = []
 
-    // represents one side of POVs
-    const povGroup = []
+    for (const pov of povs) {
+        const povGroup = pov.split(" ").map((p) => parseInt(p))
+        povsArray.push(povGroup)
+    }
 
-
-    povs.forEach((pov) => {
-        if (povGroup.length === 4) {
-            povsArr.push([...povGroup])
-            povGroup.splice(0) // reset the array
-        }
-
-        povGroup.push(parseInt(pov))
-    })
-
-    // pushing final group
-    povsArr.push(povGroup)
-
-    return povsArr
+    return povsArray
 }
 
 async function eraseFileContent() {
     await Bun.write(SOLUTIONS_FILE_PATH, "")
 }
 
-function writeToFile(povs) {
+function writeToFile(povs, colNum) {
     const file = Bun.file(SOLUTIONS_FILE_PATH)
 
     const writer = file.writer()
@@ -277,7 +276,7 @@ function writeToFile(povs) {
     writer.write(`${solutions.length} solution(s) found\n\n`)
     solutions.forEach((solution, index) => {
         writer.write(`Solution ${index + 1}:\n`)
-        writer.write(parseBoard(solution, povs))
+        writer.write(parseBoard(solution, povs, colNum))
         writer.write("\n")
     })
 
@@ -287,16 +286,35 @@ function writeToFile(povs) {
 const isArgsInvalid = validateArgs(Bun.argv)
 
 if (!isArgsInvalid) {
-    const board = initBoard()
     const povs = parseArgs(Bun.argv)
-    const startPosition = 0 // will go from 0 to 16
+    console.log("Parsed POVs...")
 
-    backtrack(board, povs, startPosition)
+    const rowNum = povs[LEFT_POV_INDEX].length
+    const colNum = povs[UP_POV_INDEX].length
+
+    const board = initBoard(rowNum, colNum)
+    console.log("Initialized board...")
+
+    const startPosition = 0 // will go from 0 to rowNum * colNum
+
+    const maxSkyscraperHeight = Math.max(rowNum, colNum)
+    const skyscraperHeights = Array.from({length: maxSkyscraperHeight}, (_, i) => i + 1)
+    console.log("Skyscraper heights ", skyscraperHeights)
+    const skyscraperNum = rowNum * colNum
+    console.log("Skyscraper number ", skyscraperNum)
+
+
+    backtrack(board, povs, startPosition, colNum, skyscraperHeights, skyscraperNum)
+
+    if (solutions.length > 0) {
+        console.log(`${solutions.length} solution(s) found`)
+    }
 
     eraseFileContent()
-    writeToFile(povs)
+    writeToFile(povs, colNum)
 } else {
     console.log(isArgsInvalid)
 }
 
-// "4 3 2 1 1 2 2 2 4 3 2 1 1 2 2 2"
+// "2 2 3 1" "1 3 2 2" "3 2 1 2" "3 1 2 2"
+// "3 3 3 2 2 4 2 1" "1 4 6 3 2 2 2 3" "4 3 3 3 2 1 2 3" "4 3 1 2 4 2 3 3"
