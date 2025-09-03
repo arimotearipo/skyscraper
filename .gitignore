@@ -1,0 +1,12 @@
+# Build artifacts
+skyscraper
+*.o
+*.exe
+
+# Temporary files
+c_solutions.txt
+original_recreated.txt
+
+# OS files
+.DS_Store
+Thumbs.db
